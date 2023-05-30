@@ -115,55 +115,79 @@ function fromJSON(proto, json) {
  *  For more examples see unit tests.
  */
 
-/*
-  builder.combine(
-    builder.element('p').pseudoClass('focus'),
-    '>',
-    builder.element('a').attr('href$=".png"'),
-  ).stringify(),
-*/
-
 const cssSelectorBuilder = {
   result: '',
+  level: 0,
+  hasElement: false,
+  hasId: false,
+  hasPseudoElement: false,
+  exception(_err) {
+    if (_err === 'hasError') throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    if (_err === 'levelError') throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+  },
+
   element(value) {
-    this.result += value;
-    return this;
+    if (this.hasElement) this.exception('hasError');
+    if (this.level > 1) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = this.result + value;
+    obj.hasElement = true;
+    obj.level = 1;
+    return obj;
   },
 
   id(value) {
-    this.result += `#${value}`;
-    return this;
+    if (this.hasId) this.exception('hasError');
+    if (this.level > 2) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = `${this.result}#${value}`;
+    obj.hasId = true;
+    obj.level = 2;
+    return obj;
   },
 
   class(value) {
-    this.result += `.${value}`;
-    return this;
+    if (this.level > 3) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = `${this.result}.${value}`;
+    obj.level = 3;
+    return obj;
   },
 
   attr(value) {
-    this.result += `[${value}]`;
-    return this;
+    if (this.level > 4) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = `${this.result}[${value}]`;
+    obj.level = 4;
+    return obj;
   },
 
   pseudoClass(value) {
-    this.result += `:${value}`;
-    return this;
+    if (this.level > 5) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = `${this.result}:${value}`;
+    obj.level = 5;
+    return obj;
   },
 
   pseudoElement(value) {
-    this.result += `::${value}`;
-    return this;
+    if (this.hasPseudoElement) this.exception('hasError');
+    if (this.level > 6) this.exception('levelError');
+    const obj = Object.create(this);
+    obj.result = `${this.result}::${value}`;
+    obj.hasPseudoElement = true;
+    obj.level = 6;
+    return obj;
   },
 
   combine(selector1, combinator, selector2) {
-    console.log(`${selector1.result} AAAA ${selector2.result}`);
-    this.result = combinator;
-    return this;
+    const obj = Object.create(this);
+    obj.result = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+    obj.level = this.level;
+    return obj;
   },
   stringify() {
-    const res = this.result;
-    this.result = '';
-    return res;
+    return this.result;
   },
 };
 
